@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartGrid — Weather</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <div><div class="logo-name">SmartGrid</div><div class="logo-sub">Analytics Platform</div></div>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Navigation</div>
+    <a href="index.html"      class="nav-link"><span class="icon">⊞</span> Dashboard</a>
+    <a href="households.html" class="nav-link"><span class="icon">🏠</span> Households</a>
+    <a href="anomalies.html"  class="nav-link"><span class="icon">⚠️</span> Anomalies</a>
+    <a href="forecast.html"   class="nav-link"><span class="icon">📈</span> Forecast</a>
+    <a href="weather.html"    class="nav-link active"><span class="icon">🌤️</span> Weather</a>
+    <a href="analytics.html"  class="nav-link"><span class="icon">📊</span> Analytics</a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="api-status"><span class="status-dot"></span> API Connected</div>
+  </div>
+</nav>
+
+<div class="topbar">
+  <div class="topbar-title">Weather & Energy Correlation</div>
+</div>
+
+<main class="main">
+<div class="page-content">
+
+  <div id="content">
+    <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-text">Calculating correlations...</div></div>
+  </div>
+
+</div>
+</main>
+
+<script src="js/api.js"></script>
+<script>
+const corrColor = v => v > 0.3 ? '#16A34A' : v < -0.3 ? '#DC2626' : '#D97706';
+const corrBadge = v => v > 0.3 ? 'badge-green' : v < -0.3 ? 'badge-red' : 'badge-yellow';
+
+async function init() {
+  try {
+    const [corr, weather] = await Promise.all([API.weatherCorr(), API.weatherDaily()]);
+
+    if (!corr.correlations) {
+      document.getElementById('content').innerHTML =
+        `<div class="card"><div class="empty-state">
+          <div class="icon">⚠️</div><p>No correlation data found</p>
+          <span>Ensure weather and energy tables are both loaded</span>
+        </div></div>`;
+      return;
+    }
+
+    // Correlation KPI cards
+    const corrCards = corr.correlations.map(c => `
+      <div class="kpi-card" style="--kpi-color:${corrColor(c.correlation)};--kpi-bg:${c.correlation>0.3?'#F0FDF4':c.correlation<-0.3?'#FEF2F2':'#FFFBEB'}">
+        <div class="kpi-label">${c.variable.replace(/_/g,' ').toUpperCase()}</div>
+        <div class="kpi-value" style="color:${corrColor(c.correlation)};font-size:22px">
+          ${c.correlation>0?'+':''}${c.correlation}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <span class="badge ${corrBadge(c.correlation)}">${c.strength}</span>
+          <span class="badge badge-${c.direction==='Positive'?'green':'red'}">${c.direction}</span>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('content').innerHTML = `
+      <div style="margin-bottom:8px">
+        <div class="section-title">Pearson Correlation: Weather vs Energy</div>
+        <div class="section-sub" style="font-size:12px;color:var(--muted);margin-top:4px">
+          Based on ${corr.data_points?.toLocaleString()} data points · ${corr.date_range?.start} to ${corr.date_range?.end}
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:20px">${corrCards}</div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Correlation Coefficients</div>
+            <span class="badge badge-blue">Pearson r</span>
+          </div>
+          <canvas id="corrBar" height="160"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Temperature vs Consumption</div>
+            <span class="badge badge-gray">Scatter plot</span>
+          </div>
+          <canvas id="scatter" height="160"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="dot"></span> London Temperature — Last 90 Days</div>
+          <span class="badge badge-gray">Daily min / mean / max</span>
+        </div>
+        <canvas id="tempLine" height="70"></canvas>
+      </div>`;
+
+    // Correlation bar chart (horizontal)
+    new Chart(document.getElementById('corrBar'), {
+      type: 'bar',
+      data: {
+        labels: corr.correlations.map(c => c.variable.replace(/_/g,' ')),
+        datasets: [{
+          label: 'Correlation r',
+          data: corr.correlations.map(c => c.correlation),
+          backgroundColor: corr.correlations.map(c => corrColor(c.correlation) + 'bb'),
+          borderColor:     corr.correlations.map(c => corrColor(c.correlation)),
+          borderWidth: 1, borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend:{display:false}, tooltip:pbiTooltip() },
+        scales: {
+          x: { min:-1, max:1, ticks:{color:'#94a3b8',font:{size:11}}, grid:{color:'#f1f5f9'} },
+          y: { ticks:{color:'#475569',font:{size:11}}, grid:{color:'#f1f5f9'} }
+        }
+      }
+    });
+
+    // Scatter: temp_mean vs avg_consumption
+    const scatter = (corr.scatter_data||[])
+      .filter(d => d.temp_mean != null && d.avg_consumption != null)
+      .map(d => ({ x: parseFloat(d.temp_mean), y: parseFloat(d.avg_consumption) }));
+
+    new Chart(document.getElementById('scatter'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Temp vs kWh',
+          data: scatter,
+          backgroundColor: 'rgba(0,120,212,0.35)',
+          borderColor: 'rgba(0,120,212,0.6)',
+          pointRadius: 3, pointHoverRadius: 5
+        }]
+      },
+      options: {
+        plugins: { legend:{display:false}, tooltip:{ ...pbiTooltip(), callbacks:{
+          label: ctx => `Temp: ${ctx.parsed.x}°C | kWh: ${ctx.parsed.y?.toFixed(4)}`
+        }}},
+        scales: {
+          x: { title:{display:true,text:'Temperature (°C)',color:'#64748b',font:{size:11}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'#f1f5f9'} },
+          y: { title:{display:true,text:'Avg Consumption (kWh)',color:'#64748b',font:{size:11}}, ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'#f1f5f9'} }
+        }
+      }
+    });
+
+    // Temperature line
+    const last90 = weather.slice(-90);
+    new Chart(document.getElementById('tempLine'), {
+      type: 'line',
+      data: {
+        labels: last90.map(d => d.weather_date?.slice(5)),
+        datasets: [
+          { label:'Max °C',  data:last90.map(d=>d.temp_max),  borderColor:'#DC2626', pointRadius:0, borderWidth:1.5, fill:false, tension:0.4, backgroundColor:'transparent' },
+          { label:'Mean °C', data:last90.map(d=>d.temp_mean), borderColor:'#D97706', pointRadius:0, borderWidth:2,   fill:false, tension:0.4, backgroundColor:'transparent' },
+          { label:'Min °C',  data:last90.map(d=>d.temp_min),  borderColor:'#0078D4', pointRadius:0, borderWidth:1.5, fill:false, tension:0.4, backgroundColor:'transparent' }
+        ]
+      },
+      options: {
+        interaction: { mode:'index', intersect:false },
+        plugins: { legend:{ position:'top', labels:{font:{size:12},color:'#475569',usePointStyle:true} }, tooltip:pbiTooltip() },
+        scales: {
+          x: { ticks:{color:'#94a3b8',maxTicksLimit:12,font:{size:10}}, grid:{color:'#f1f5f9'} },
+          y: { ticks:{color:'#94a3b8',font:{size:10}}, grid:{color:'#f1f5f9'}, title:{display:true,text:'°C',color:'#94a3b8',font:{size:10}} }
+        }
+      }
+    });
+
+  } catch(e) {
+    document.getElementById('content').innerHTML =
+      `<div class="alert alert-error">Failed to load weather data: ${e.message}</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>

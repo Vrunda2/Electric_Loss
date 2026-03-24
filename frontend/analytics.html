@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartGrid — Analytics</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <div><div class="logo-name">SmartGrid</div><div class="logo-sub">Analytics Platform</div></div>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Navigation</div>
+    <a href="index.html"      class="nav-link"><span class="icon">⊞</span> Dashboard</a>
+    <a href="households.html" class="nav-link"><span class="icon">🏠</span> Households</a>
+    <a href="anomalies.html"  class="nav-link"><span class="icon">⚠️</span> Anomalies</a>
+    <a href="forecast.html"   class="nav-link"><span class="icon">📈</span> Forecast</a>
+    <a href="weather.html"    class="nav-link"><span class="icon">🌤️</span> Weather</a>
+    <a href="analytics.html"  class="nav-link active"><span class="icon">📊</span> Analytics</a>
+    <a href="cost.html"       class="nav-link"><span class="icon">💷</span> Cost &amp; Benchmark</a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="api-status"><span class="status-dot"></span> API Connected</div>
+  </div>
+</nav>
+
+<div class="topbar">
+  <div class="topbar-title">Advanced Analytics</div>
+</div>
+
+<main class="main">
+<div class="page-content">
+
+  <!-- Tabs -->
+  <div class="tabs" style="margin-bottom:20px">
+    <button class="tab active" onclick="showTab('acorn-tab')">📊 ACORN & Tariff</button>
+    <button class="tab" onclick="showTab('efficiency-tab')">⚡ Efficiency Scores</button>
+  </div>
+
+  <!-- ACORN & Tariff tab -->
+  <div id="acorn-tab">
+    <div id="acorn-content">
+      <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-text">Loading analytics...</div></div>
+    </div>
+  </div>
+
+  <!-- Efficiency Scores tab -->
+  <div id="efficiency-tab" style="display:none">
+    <div id="eff-content">
+      <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-text">Loading efficiency scores...</div></div>
+    </div>
+  </div>
+
+</div>
+</main>
+
+<script src="js/api.js"></script>
+<script>
+const COLORS = ['#0078D4','#16A34A','#D97706','#DC2626','#7C3AED','#EA580C','#0891B2','#0D9488'];
+
+function showTab(tab) {
+  document.getElementById('acorn-tab').style.display      = tab === 'acorn-tab'      ? '' : 'none';
+  document.getElementById('efficiency-tab').style.display = tab === 'efficiency-tab' ? '' : 'none';
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (i===0&&tab==='acorn-tab')||(i===1&&tab==='efficiency-tab'));
+  });
+  if (tab === 'efficiency-tab' && !effLoaded) loadEfficiency();
+}
+
+let effLoaded = false;
+
+// ── ACORN & Tariff ───────────────────────────────────────
+async function loadAcorn() {
+  try {
+    const [acorn, tariff] = await Promise.all([API.acorn(), API.tariff()]);
+
+    document.getElementById('acorn-content').innerHTML = `
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Avg Consumption by ACORN Group</div>
+            <span class="badge badge-blue">${acorn.length} groups</span>
+          </div>
+          <canvas id="acornBar" height="200"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Tariff Type Distribution</div>
+          </div>
+          <canvas id="tariffDoughnut" height="180"></canvas>
+          <div id="tariff-table" style="margin-top:16px"></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Households per ACORN Group</div>
+          </div>
+          <canvas id="acornHH" height="180"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> ACORN Group Details</div>
+          </div>
+          <div class="table-wrap" style="max-height:300px;overflow-y:auto" id="acorn-table"></div>
+        </div>
+      </div>`;
+
+    new Chart(document.getElementById('acornBar'), {
+      type: 'bar',
+      data: {
+        labels: acorn.map(a => a.acorn_group),
+        datasets: [{
+          label: 'Avg Daily kWh',
+          data: acorn.map(a => a.avg_daily_consumption),
+          backgroundColor: acorn.map((_,i) => COLORS[i%COLORS.length] + 'cc'),
+          borderColor:     acorn.map((_,i) => COLORS[i%COLORS.length]),
+          borderWidth: 1, borderRadius: 5, borderSkipped: false
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend:{display:false}, tooltip:pbiTooltip() },
+        scales: pbiScales()
+      }
+    });
+
+    new Chart(document.getElementById('tariffDoughnut'), {
+      type: 'doughnut',
+      data: {
+        labels: tariff.map(t => `${t.tariff_type} (${t.household_count?.toLocaleString()})`),
+        datasets: [{
+          data: tariff.map(t => t.household_count),
+          backgroundColor: ['#0078D4','#F2994A'],
+          borderColor: '#fff', borderWidth: 3
+        }]
+      },
+      options: {
+        cutout: '60%',
+        plugins: {
+          legend: { position:'bottom', labels:{font:{size:12},color:'#475569',usePointStyle:true,padding:14} },
+          tooltip: pbiTooltip()
+        }
+      }
+    });
+
+    document.getElementById('tariff-table').innerHTML =
+      `<table><thead><tr><th>Tariff</th><th>Households</th><th>Avg Daily kWh</th><th>Total kWh</th></tr></thead>
+       <tbody>${tariff.map((t,i)=>`<tr>
+        <td><span class="badge badge-${i===0?'blue':'yellow'}">${t.tariff_type}</span></td>
+        <td style="font-weight:600">${t.household_count?.toLocaleString()}</td>
+        <td style="font-family:var(--mono)">${t.avg_daily_kwh?.toFixed(4)}</td>
+        <td style="font-family:var(--mono)">${t.total_kwh?.toFixed(0)}</td>
+       </tr>`).join('')}</tbody></table>`;
+
+    new Chart(document.getElementById('acornHH'), {
+      type: 'bar',
+      data: {
+        labels: acorn.map(a => a.acorn_group),
+        datasets: [{
+          label: 'Households',
+          data: acorn.map(a => a.household_count),
+          backgroundColor: acorn.map((_,i) => COLORS[i%COLORS.length] + 'bb'),
+          borderRadius: 5
+        }]
+      },
+      options: {
+        plugins: { legend:{display:false}, tooltip:pbiTooltip() },
+        scales: pbiScales()
+      }
+    });
+
+    document.getElementById('acorn-table').innerHTML =
+      `<table><thead><tr><th>Group</th><th>Households</th><th>Avg kWh</th><th>Max kWh</th><th>Min kWh</th></tr></thead>
+       <tbody>${acorn.map((a,i)=>`<tr>
+        <td><span class="badge" style="background:${COLORS[i%COLORS.length]}22;color:${COLORS[i%COLORS.length]}">${a.acorn_group}</span></td>
+        <td>${a.household_count?.toLocaleString()}</td>
+        <td style="font-family:var(--mono);font-weight:600;color:var(--accent)">${a.avg_daily_consumption?.toFixed(4)}</td>
+        <td style="font-family:var(--mono);color:var(--red)">${a.max_consumption?.toFixed(4)}</td>
+        <td style="font-family:var(--mono);color:var(--green)">${a.min_consumption?.toFixed(4)}</td>
+       </tr>`).join('')}</tbody></table>`;
+
+  } catch(e) {
+    document.getElementById('acorn-content').innerHTML =
+      `<div class="alert alert-error">Failed to load analytics: ${e.message}</div>`;
+  }
+}
+
+// ── Efficiency Scores tab ────────────────────────────────
+async function loadEfficiency() {
+  effLoaded = true;
+  try {
+    const scores = await API.efficiencyScores(500);
+
+    // Group by ACORN
+    const byGroup = {};
+    scores.forEach(s => {
+      if (!byGroup[s.acorn_group]) byGroup[s.acorn_group] = [];
+      byGroup[s.acorn_group].push(s);
+    });
+
+    // Avg efficiency score per group
+    const groupNames  = Object.keys(byGroup);
+    const groupScores = groupNames.map(g => {
+      const arr = byGroup[g];
+      return round2(arr.reduce((a,b) => a + b.efficiency_score, 0) / arr.length);
+    });
+
+    // Score buckets for distribution chart
+    const buckets = { '0–20': 0, '21–40': 0, '41–60': 0, '61–80': 0, '81–100': 0 };
+    scores.forEach(s => {
+      const v = s.efficiency_score || 0;
+      if (v <= 20)      buckets['0–20']++;
+      else if (v <= 40) buckets['21–40']++;
+      else if (v <= 60) buckets['41–60']++;
+      else if (v <= 80) buckets['61–80']++;
+      else              buckets['81–100']++;
+    });
+
+    const top10    = [...scores].sort((a,b) => b.efficiency_score - a.efficiency_score).slice(0, 10);
+    const bottom10 = [...scores].sort((a,b) => a.efficiency_score - b.efficiency_score).slice(0, 10);
+
+    document.getElementById('eff-content').innerHTML = `
+
+      <!-- KPIs -->
+      <div class="grid-4" style="margin-bottom:16px">
+        <div class="kpi-card" style="--kpi-color:#16A34A;--kpi-bg:#F0FDF4">
+          <div class="kpi-label">Avg Efficiency Score</div>
+          <div class="kpi-value" style="color:var(--green);font-size:22px">${round2(scores.reduce((a,b)=>a+b.efficiency_score,0)/scores.length)}</div>
+          <div class="kpi-sub">across ${scores.length} households</div>
+          <div class="kpi-icon">⚡</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#7C3AED;--kpi-bg:#F5F3FF">
+          <div class="kpi-label">Most Efficient</div>
+          <div class="kpi-value" style="color:#7C3AED;font-size:16px">${top10[0]?.household_id || '—'}</div>
+          <div class="kpi-sub">Score ${top10[0]?.efficiency_score?.toFixed(0)}/100</div>
+          <div class="kpi-icon">🏆</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#DC2626;--kpi-bg:#FEF2F2">
+          <div class="kpi-label">Least Efficient</div>
+          <div class="kpi-value" style="color:var(--red);font-size:16px">${bottom10[0]?.household_id || '—'}</div>
+          <div class="kpi-sub">Score ${bottom10[0]?.efficiency_score?.toFixed(0)}/100</div>
+          <div class="kpi-icon">⚠️</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:#D97706;--kpi-bg:#FFFBEB">
+          <div class="kpi-label">ACORN Groups</div>
+          <div class="kpi-value" style="color:var(--yellow);font-size:22px">${groupNames.length}</div>
+          <div class="kpi-sub">with efficiency data</div>
+          <div class="kpi-icon">📦</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Avg Efficiency by ACORN Group</div>
+            <span class="badge badge-green">0–100 score</span>
+          </div>
+          <canvas id="groupEffBar" height="180"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Score Distribution</div>
+            <span class="badge badge-gray">${scores.length} households</span>
+          </div>
+          <canvas id="distBar" height="180"></canvas>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot" style="background:var(--green)"></span> Top 10 Most Efficient</div>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Household</th><th>ACORN Group</th><th>Avg kWh</th><th>Score</th></tr></thead>
+            <tbody>${top10.map(s=>`<tr>
+              <td style="font-family:var(--mono);color:var(--accent);font-size:12px">${s.household_id}</td>
+              <td style="font-size:12px">${s.acorn_group}</td>
+              <td style="font-family:var(--mono);font-size:12px">${s.avg_kwh?.toFixed(3)}</td>
+              <td><div style="display:flex;align-items:center;gap:6px">
+                <div style="flex:1;height:6px;background:#f1f5f9;border-radius:3px">
+                  <div style="width:${s.efficiency_score}%;height:100%;background:var(--green);border-radius:3px"></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--green)">${s.efficiency_score?.toFixed(0)}</span>
+              </div></td>
+            </tr>`).join('')}</tbody></table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot" style="background:var(--red)"></span> Bottom 10 — Most Opportunity</div>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Household</th><th>ACORN Group</th><th>Avg kWh</th><th>Score</th></tr></thead>
+            <tbody>${bottom10.map(s=>`<tr>
+              <td style="font-family:var(--mono);color:var(--accent);font-size:12px">${s.household_id}</td>
+              <td style="font-size:12px">${s.acorn_group}</td>
+              <td style="font-family:var(--mono);font-size:12px">${s.avg_kwh?.toFixed(3)}</td>
+              <td><div style="display:flex;align-items:center;gap:6px">
+                <div style="flex:1;height:6px;background:#f1f5f9;border-radius:3px">
+                  <div style="width:${s.efficiency_score}%;height:100%;background:var(--red);border-radius:3px"></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--red)">${s.efficiency_score?.toFixed(0)}</span>
+              </div></td>
+            </tr>`).join('')}</tbody></table>
+          </div>
+        </div>
+      </div>`;
+
+    new Chart(document.getElementById('groupEffBar'), {
+      type: 'bar',
+      data: {
+        labels: groupNames,
+        datasets: [{ label: 'Avg Efficiency Score', data: groupScores,
+          backgroundColor: groupNames.map((_,i) => COLORS[i%COLORS.length]+'bb'),
+          borderRadius: 5 }]
+      },
+      options: {
+        plugins: { legend:{display:false}, tooltip:pbiTooltip() },
+        scales: { ...pbiScales(), y: { ...pbiScales().y, min:0, max:100 } }
+      }
+    });
+
+    new Chart(document.getElementById('distBar'), {
+      type: 'bar',
+      data: {
+        labels: Object.keys(buckets),
+        datasets: [{ label: 'Households', data: Object.values(buckets),
+          backgroundColor: ['#DC2626bb','#F2994Abb','#D97706bb','#16A34Abb','#0078D4bb'],
+          borderRadius: 5 }]
+      },
+      options: {
+        plugins: { legend:{display:false}, tooltip:pbiTooltip() },
+        scales: pbiScales('Efficiency Score Range', 'Households')
+      }
+    });
+
+  } catch(e) {
+    document.getElementById('eff-content').innerHTML =
+      `<div class="alert alert-error">Failed to load efficiency scores: ${e.message}</div>`;
+  }
+}
+
+function round2(n) { return Math.round(n * 100) / 100; }
+
+loadAcorn();
+</script>
+</body>
+</html>
