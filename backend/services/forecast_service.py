@@ -94,7 +94,9 @@ def get_forecast(household_id: str, days: int = 30):
     future['floor'] = floor
 
     last_30_temp = df['temp_mean'].tail(30).mean()
-    future['temp_mean'] = df.set_index('ds')['temp_mean'].reindex(future['ds']).values
+    # Use merge instead of reindex to avoid duplicate label issues
+    temp_lookup = df[['ds', 'temp_mean']].copy()
+    future = future.merge(temp_lookup, on='ds', how='left')
     future['temp_mean'] = future['temp_mean'].fillna(last_30_temp)
 
     forecast    = model.predict(future)

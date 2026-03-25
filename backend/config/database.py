@@ -10,7 +10,7 @@ def get_engine():
     port = os.getenv("DB_PORT", "3306")
     user = os.getenv("DB_USER", "root")
     password = quote_plus(os.getenv("DB_PASSWORD", ""))  # ← encodes @ safely
-    database = os.getenv("DB_NAME", "smartgrid_db")
+    database = os.getenv("DB_NAME", "Electric_Loss")
 
     url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
     return create_engine(url, pool_size=5, echo=False)

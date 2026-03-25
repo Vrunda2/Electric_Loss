@@ -366,7 +366,7 @@ def get_acorn_analytics():
 # Weather correlation — enhanced with scatter data + Pearson r
 # ─────────────────────────────────────────────────────────
 def get_weather_energy_correlation():
-    cached = _get_cache("weather_corr", ttl=600)
+    cached = _get_cache("weather_corr_v2", ttl=600)
     if cached is not None:
         return cached
 
@@ -374,18 +374,17 @@ def get_weather_energy_correlation():
     query = text("""
         SELECT
             w.weather_date,
-            w.temp_mean,
-            w.temp_min,
-            w.temp_max,
+            (w.temperaturemax + w.temperaturemin) / 2 AS temp_mean,
+            w.temperaturemin AS temp_min,
+            w.temperaturemax AS temp_max,
             w.humidity,
-            w.wind_speed,
-            w.precip_probability,
+            w.windspeed AS wind_speed,
+            CASE WHEN w.preciptype = 'rain' THEN 1.0 ELSE 0.0 END AS precip_probability,
             ROUND(AVG(d.energy_sum), 4) AS avg_consumption
         FROM weather_daily w
         JOIN daily_energy d ON w.weather_date = d.reading_date
         WHERE d.energy_sum IS NOT NULL
-        GROUP BY w.weather_date, w.temp_mean, w.temp_min, w.temp_max,
-                 w.humidity, w.wind_speed, w.precip_probability
+        GROUP BY w.weather_date, w.temperaturemax, w.temperaturemin, w.humidity, w.windspeed, w.preciptype
         ORDER BY w.weather_date
     """)
     with engine.connect() as conn:
@@ -425,7 +424,7 @@ def get_weather_energy_correlation():
         "raw": df[['weather_date', 'temp_mean', 'humidity', 'wind_speed',
                    'precip_probability', 'avg_consumption']].to_dict(orient='records'),
     }
-    return _set_cache("weather_corr", data)
+    return _set_cache("weather_corr_v2", data)
 
 
 # ─────────────────────────────────────────────────────────
