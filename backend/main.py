@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.routers import households, energy, anomalies, weather, analytics, forecast
+from backend.routers import households, energy, anomalies, weather, analytics, forecast, auth
 from backend.routers.chatbot import router as chatbot_router
-app.include_router(chatbot_router)
 
 app = FastAPI(
     title=" SmartGrid Analytics API",
@@ -28,12 +27,14 @@ app.add_middleware(
 )
 
 # Register all routers
+app.include_router(auth.router)  # Auth must be first
 app.include_router(households.router)
 app.include_router(energy.router)
 app.include_router(anomalies.router)
 app.include_router(weather.router)
 app.include_router(analytics.router)
 app.include_router(forecast.router)
+app.include_router(chatbot_router)
 
 # Mount static files for the frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

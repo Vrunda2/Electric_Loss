@@ -6,6 +6,7 @@
   <title>SmartGrid — Dashboard</title>
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="preconnect" href="http://localhost:8000"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     @keyframes shimmer {
@@ -33,6 +34,12 @@
       from { opacity:0; }
       to   { opacity:1; }
     }
+
+    /* Font Awesome icon sizing in nav & kpi */
+    .nav-link .icon i { font-size: 14px; width: 20px; text-align: center; }
+    .kpi-icon i { font-size: 17px; }
+    .logo-icon i { font-size: 17px; color: #fff; }
+    .status-dot-icon i { font-size: 8px; color: var(--green); }
   </style>
 </head>
 
@@ -41,7 +48,9 @@
 <nav class="sidebar">
   <div class="sidebar-header">
     <div class="logo-row">
-      <div class="logo-icon">⚡</div>
+      <div class="logo-icon">
+        <i class="fa-solid fa-bolt"></i>
+      </div>
       <div>
         <div class="logo-name">SmartGrid</div>
         <div class="logo-sub">Analytics Platform</div>
@@ -50,16 +59,17 @@
   </div>
   <div class="nav-section">
     <div class="nav-label">Navigation</div>
-    <a href="index.html"      class="nav-link active"><span class="icon">⊞</span> Dashboard</a>
-    <a href="households.html" class="nav-link"><span class="icon">🏠</span> Households</a>
-    <a href="anomalies.html"  class="nav-link"><span class="icon">⚠️</span> Anomalies</a>
-    <a href="forecast.html"   class="nav-link"><span class="icon">📈</span> Forecast</a>
-    <a href="weather.html"    class="nav-link"><span class="icon">🌤️</span> Weather</a>
-    <a href="cost.html" class="nav-link"><span class="icon">💷</span> Cost &amp; Benchmark</a>
-    <a href="analytics.html"  class="nav-link"><span class="icon">📊</span> Analytics</a>
+    <a href="index.html"      class="nav-link active"><span class="icon"><i class="fa-solid fa-table-cells-large"></i></span> Dashboard</a>
+    <a href="households.html" class="nav-link"><span class="icon"><i class="fa-solid fa-house"></i></span> Households</a>
+    <a href="anomalies.html"  class="nav-link"><span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span> Anomalies</a>
+    <a href="forecast.html"   class="nav-link"><span class="icon"><i class="fa-solid fa-chart-line"></i></span> Forecast</a>
+    <a href="cost.html"       class="nav-link"><span class="icon"><i class="fa-solid fa-sterling-sign"></i></span> Cost &amp; Benchmark</a>
+    <a href="analytics.html"  class="nav-link"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Analytics</a>
   </div>
   <div class="sidebar-footer">
-    <div class="api-status"><span class="status-dot"></span> API Connected</div>
+    <div class="api-status">
+      <span class="status-dot"></span> API Connected
+    </div>
   </div>
 </nav>
 
@@ -82,7 +92,7 @@
       <div class="kpi-sub" id="kpi-hh-sub">
         <span class="skeleton" style="width:120px;height:11px;margin-top:6px"></span>
       </div>
-      <div class="kpi-icon">🏠</div>
+      <div class="kpi-icon"><i class="fa-solid fa-house"></i></div>
     </div>
 
     <div class="kpi-card" style="--kpi-color:#16A34A;--kpi-bg:#F0FDF4">
@@ -93,7 +103,7 @@
       <div class="kpi-sub" id="kpi-rdg-sub">
         <span class="skeleton" style="width:130px;height:11px;margin-top:6px"></span>
       </div>
-      <div class="kpi-icon">📊</div>
+      <div class="kpi-icon"><i class="fa-solid fa-chart-bar"></i></div>
     </div>
 
     <div class="kpi-card" style="--kpi-color:#D97706;--kpi-bg:#FFFBEB">
@@ -104,7 +114,7 @@
       <div class="kpi-sub" id="kpi-avg-sub">
         <span class="skeleton" style="width:110px;height:11px;margin-top:6px"></span>
       </div>
-      <div class="kpi-icon"></div>
+      <div class="kpi-icon"><i class="fa-solid fa-bolt"></i></div>
     </div>
 
     <div class="kpi-card" style="--kpi-color:#DC2626;--kpi-bg:#FEF2F2">
@@ -115,7 +125,7 @@
       <div class="kpi-sub" id="kpi-anom-sub">
         <span class="skeleton" style="width:100px;height:11px;margin-top:6px"></span>
       </div>
-      <div class="kpi-icon">🚨</div>
+      <div class="kpi-icon"><i class="fa-solid fa-siren-on"></i></div>
     </div>
 
   </div>
@@ -212,7 +222,7 @@
         <div class="card-title"><span class="dot"></span> Recent Anomalies</div>
         <a href="anomalies.html"
            style="font-size:12px;color:var(--accent);text-decoration:none;font-weight:500">
-          View all →
+          View all <i class="fa-solid fa-arrow-right" style="font-size:10px"></i>
         </a>
       </div>
       <div id="anom-table">
@@ -296,14 +306,12 @@ async function loadKPIs() {
 // ── STAGE 2: Charts — fires in parallel with Stage 1 ─────
 async function loadCharts() {
   try {
-    // All 3 fire simultaneously — fastest possible
     const [city, tariff, anomalies] = await Promise.all([
       API.citySummary(),
       API.tariff(),
       API.anomalies('', 8)
     ]);
 
-    // Monthly chart reuses city data — no extra API call!
     buildCityChart(city);
     buildTariffChart(tariff);
     buildMonthlyChart(city);
@@ -367,7 +375,6 @@ function buildTariffChart(tariff) {
 }
 
 function buildMonthlyChart(city) {
-  // Aggregate by month in JS — no extra API call!
   const monthly = {};
   city.forEach(d => {
     const m = d.reading_date?.slice(0, 7);
@@ -408,7 +415,7 @@ function buildAnomalyTable(anomalies) {
   const c = s => s==='CRITICAL'?'badge-red':s==='HIGH'?'badge-yellow':'badge-blue';
   document.getElementById('anom-table').innerHTML = anomalies.length === 0
     ? `<div class="empty-state">
-        <div class="icon">🔍</div>
+        <div class="icon"><i class="fa-solid fa-magnifying-glass"></i></div>
         <p>No anomalies detected yet</p>
         <span>Go to Anomalies page and run detection</span>
        </div>`
@@ -435,8 +442,8 @@ function buildAnomalyTable(anomalies) {
 }
 
 // ── Fire both stages at the same time — don't wait! ───────
-loadKPIs();    // fast — shows numbers first
-loadCharts();  // slightly slower — charts appear after
+loadKPIs();
+loadCharts();
 </script>
 <script src="js/chatbot-widget.js"></script>
 </body>

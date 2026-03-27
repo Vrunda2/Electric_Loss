@@ -6,7 +6,7 @@ New endpoints added:
   GET /energy/efficiency                   — efficiency scores for all households
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 from typing import Optional
 from backend.services.energy_service import (
     get_daily_energy,
@@ -17,6 +17,7 @@ from backend.services.energy_service import (
     get_efficiency_scores,
 )
 
+
 router = APIRouter(prefix="/energy", tags=["Energy"])
 
 
@@ -26,8 +27,9 @@ router = APIRouter(prefix="/energy", tags=["Energy"])
 def household_energy(
     household_id: str,
     start_date: Optional[str] = None,
-    end_date: Optional[str] = None
+    end_date: Optional[str] = None,
 ):
+    """Get household energy data"""
     return get_daily_energy(household_id, start_date, end_date)
 
 

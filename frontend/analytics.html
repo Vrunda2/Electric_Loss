@@ -5,7 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SmartGrid — Analytics</title>
   <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* Font Awesome icon sizing in nav & kpi — mirrors index.html */
+    .nav-link .icon i { font-size: 14px; width: 20px; text-align: center; }
+    .kpi-icon i { font-size: 17px; }
+    .logo-icon i { font-size: 17px; color: #fff; }
+    .status-dot-icon i { font-size: 8px; color: var(--green); }
+  </style>
 </head>
 
 <body>
@@ -13,22 +21,28 @@
 <nav class="sidebar">
   <div class="sidebar-header">
     <div class="logo-row">
-      <div class="logo-icon">⚡</div>
-      <div><div class="logo-name">SmartGrid</div><div class="logo-sub">Analytics Platform</div></div>
+      <div class="logo-icon">
+        <i class="fa-solid fa-bolt"></i>
+      </div>
+      <div>
+        <div class="logo-name">SmartGrid</div>
+        <div class="logo-sub">Analytics Platform</div>
+      </div>
     </div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Navigation</div>
-    <a href="index.html"      class="nav-link"><span class="icon">⊞</span> Dashboard</a>
-    <a href="households.html" class="nav-link"><span class="icon">🏠</span> Households</a>
-    <a href="anomalies.html"  class="nav-link"><span class="icon">⚠️</span> Anomalies</a>
-    <a href="forecast.html"   class="nav-link"><span class="icon">📈</span> Forecast</a>
-    <a href="weather.html"    class="nav-link"><span class="icon">🌤️</span> Weather</a>
-    <a href="analytics.html"  class="nav-link active"><span class="icon">📊</span> Analytics</a>
-    <a href="cost.html"       class="nav-link"><span class="icon">💷</span> Cost &amp; Benchmark</a>
+    <a href="index.html"      class="nav-link"><span class="icon"><i class="fa-solid fa-table-cells-large"></i></span> Dashboard</a>
+    <a href="households.html" class="nav-link"><span class="icon"><i class="fa-solid fa-house"></i></span> Households</a>
+    <a href="anomalies.html"  class="nav-link"><span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span> Anomalies</a>
+    <a href="forecast.html"   class="nav-link"><span class="icon"><i class="fa-solid fa-chart-line"></i></span> Forecast</a>
+    <a href="cost.html"       class="nav-link"><span class="icon"><i class="fa-solid fa-sterling-sign"></i></span> Cost &amp; Benchmark</a>
+    <a href="analytics.html"  class="nav-link active"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span> Analytics</a>
   </div>
   <div class="sidebar-footer">
-    <div class="api-status"><span class="status-dot"></span> API Connected</div>
+    <div class="api-status">
+      <span class="status-dot"></span> API Connected
+    </div>
   </div>
 </nav>
 
@@ -41,21 +55,31 @@
 
   <!-- Tabs -->
   <div class="tabs" style="margin-bottom:20px">
-    <button class="tab active" onclick="showTab('acorn-tab')">📊 ACORN & Tariff</button>
-    <button class="tab" onclick="showTab('efficiency-tab')">⚡ Efficiency Scores</button>
+    <button class="tab active" onclick="showTab('acorn-tab')">
+      <i class="fa-solid fa-chart-bar" style="margin-right:6px"></i> ACORN &amp; Tariff
+    </button>
+    <button class="tab" onclick="showTab('efficiency-tab')">
+      <i class="fa-solid fa-bolt" style="margin-right:6px"></i> Efficiency Scores
+    </button>
   </div>
 
   <!-- ACORN & Tariff tab -->
   <div id="acorn-tab">
     <div id="acorn-content">
-      <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-text">Loading analytics...</div></div>
+      <div class="spinner-wrap">
+        <div class="spinner"></div>
+        <div class="spinner-text">Loading analytics...</div>
+      </div>
     </div>
   </div>
 
   <!-- Efficiency Scores tab -->
   <div id="efficiency-tab" style="display:none">
     <div id="eff-content">
-      <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-text">Loading efficiency scores...</div></div>
+      <div class="spinner-wrap">
+        <div class="spinner"></div>
+        <div class="spinner-text">Loading efficiency scores...</div>
+      </div>
     </div>
   </div>
 
@@ -236,25 +260,25 @@ async function loadEfficiency() {
           <div class="kpi-label">Avg Efficiency Score</div>
           <div class="kpi-value" style="color:var(--green);font-size:22px">${round2(scores.reduce((a,b)=>a+b.efficiency_score,0)/scores.length)}</div>
           <div class="kpi-sub">across ${scores.length} households</div>
-          <div class="kpi-icon">⚡</div>
+          <div class="kpi-icon"><i class="fa-solid fa-bolt"></i></div>
         </div>
         <div class="kpi-card" style="--kpi-color:#7C3AED;--kpi-bg:#F5F3FF">
           <div class="kpi-label">Most Efficient</div>
           <div class="kpi-value" style="color:#7C3AED;font-size:16px">${top10[0]?.household_id || '—'}</div>
           <div class="kpi-sub">Score ${top10[0]?.efficiency_score?.toFixed(0)}/100</div>
-          <div class="kpi-icon">🏆</div>
+          <div class="kpi-icon"><i class="fa-solid fa-trophy"></i></div>
         </div>
         <div class="kpi-card" style="--kpi-color:#DC2626;--kpi-bg:#FEF2F2">
           <div class="kpi-label">Least Efficient</div>
           <div class="kpi-value" style="color:var(--red);font-size:16px">${bottom10[0]?.household_id || '—'}</div>
           <div class="kpi-sub">Score ${bottom10[0]?.efficiency_score?.toFixed(0)}/100</div>
-          <div class="kpi-icon">⚠️</div>
+          <div class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
         </div>
         <div class="kpi-card" style="--kpi-color:#D97706;--kpi-bg:#FFFBEB">
           <div class="kpi-label">ACORN Groups</div>
           <div class="kpi-value" style="color:var(--yellow);font-size:22px">${groupNames.length}</div>
           <div class="kpi-sub">with efficiency data</div>
-          <div class="kpi-icon">📦</div>
+          <div class="kpi-icon"><i class="fa-solid fa-layer-group"></i></div>
         </div>
       </div>
 
@@ -354,5 +378,6 @@ function round2(n) { return Math.round(n * 100) / 100; }
 
 loadAcorn();
 </script>
+<script src="js/chatbot-widget.js"></script>
 </body>
 </html>

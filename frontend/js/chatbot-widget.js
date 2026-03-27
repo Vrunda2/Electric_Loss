@@ -7,6 +7,14 @@
 (function () {
   const API_BASE = 'http://localhost:8000';
 
+  // ── Inject Font Awesome ───────────────────────────────────────────────────
+  if (!document.querySelector('link[href*="font-awesome"]')) {
+    const fa = document.createElement('link');
+    fa.rel = 'stylesheet';
+    fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
+    document.head.appendChild(fa);
+  }
+
   // ── Inject CSS ────────────────────────────────────────────────────────────
   const style = document.createElement('style');
   style.textContent = `
@@ -32,7 +40,6 @@
       transform: scale(1.08);
       box-shadow: 0 6px 28px rgba(0,120,212,0.55);
     }
-    #sg-chat-btn svg { width: 26px; height: 26px; fill: #fff; }
 
     #sg-chat-badge {
       position: absolute;
@@ -103,7 +110,7 @@
     #sg-chat-close {
       background: rgba(255,255,255,0.15);
       border: none; cursor: pointer;
-      color: #fff; font-size: 18px;
+      color: #fff; font-size: 15px;
       width: 28px; height: 28px;
       border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
@@ -268,7 +275,6 @@
     }
     #sg-chat-send:hover { background: #006CBF; transform: scale(1.05); }
     #sg-chat-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-    #sg-chat-send svg { width: 16px; height: 16px; fill: #fff; }
   `;
   document.head.appendChild(style);
 
@@ -276,20 +282,24 @@
   const html = `
     <!-- Floating button -->
     <button id="sg-chat-btn" title="Ask SmartGrid AI">
-      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+      <i class="fa-solid fa-comments" style="color:#fff;font-size:22px"></i>
       <div id="sg-chat-badge">1</div>
     </button>
 
     <!-- Chat window -->
     <div id="sg-chat-window">
       <div id="sg-chat-header">
-        <div class="sg-avatar">⚡</div>
+        <div class="sg-avatar">
+          <i class="fa-solid fa-bolt" style="color:#fff;font-size:16px"></i>
+        </div>
         <div style="flex:1">
           <div class="sg-title">SmartGrid AI</div>
           <div class="sg-sub">Powered by Gemini</div>
         </div>
         <div class="sg-dot"></div>
-        <button id="sg-chat-close">✕</button>
+        <button id="sg-chat-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <div id="sg-chat-messages"></div>
@@ -299,7 +309,7 @@
       <div id="sg-chat-input-row">
         <textarea id="sg-chat-input" placeholder="Ask anything about your energy data..." rows="1"></textarea>
         <button id="sg-chat-send">
-          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          <i class="fa-solid fa-paper-plane" style="color:#fff;font-size:14px"></i>
         </button>
       </div>
     </div>
@@ -342,7 +352,7 @@
   // ── Welcome message ───────────────────────────────────────────────────────
   function addWelcomeMessage() {
     appendMessage('bot',
-      "👋 Hi! I'm your **SmartGrid AI assistant**.\n\nI can answer questions about your energy data — consumption patterns, anomalies, household comparisons, weather correlations, and more.\n\nWhat would you like to know?"
+      "Hi! I'm your **SmartGrid AI assistant**.\n\nI can answer questions about your energy data — consumption patterns, anomalies, household comparisons, weather correlations, and more.\n\nWhat would you like to know?"
     );
   }
 
@@ -352,7 +362,7 @@
     try {
       const res = await fetch(`${API_BASE}/chatbot/suggestions`);
       const data = await res.json();
-      const chips = data.suggestions.slice(0, 4); // Show 4 chips
+      const chips = data.suggestions.slice(0, 4);
       suggestDiv.innerHTML = chips.map(s =>
         `<span class="sg-chip" onclick="window._sgAsk('${s.replace(/'/g, "\\'")}')">${s}</span>`
       ).join('');
@@ -384,7 +394,9 @@
 
     const avatar = document.createElement('div');
     avatar.className = 'sg-msg-avatar';
-    avatar.textContent = role === 'bot' ? '⚡' : 'U';
+    avatar.innerHTML = role === 'bot'
+      ? '<i class="fa-solid fa-bolt" style="color:#0078D4;font-size:13px"></i>'
+      : '<i class="fa-solid fa-user" style="color:#fff;font-size:12px"></i>';
 
     const bubble = document.createElement('div');
     bubble.className = 'sg-msg-bubble';
@@ -394,7 +406,7 @@
       if (sqlUsed) {
         const sqlBadge = document.createElement('div');
         sqlBadge.className = 'sg-sql-badge';
-        sqlBadge.innerHTML = `🔍 SQL used`;
+        sqlBadge.innerHTML = `<i class="fa-solid fa-database" style="font-size:9px"></i> SQL used`;
         sqlBadge.title = sqlUsed;
         sqlBadge.onclick = () => {
           const shown = sqlBadge.nextSibling;
@@ -426,7 +438,9 @@
     div.className = 'sg-msg bot sg-typing';
     div.id = 'sg-typing';
     div.innerHTML = `
-      <div class="sg-msg-avatar">⚡</div>
+      <div class="sg-msg-avatar">
+        <i class="fa-solid fa-bolt" style="color:#0078D4;font-size:13px"></i>
+      </div>
       <div class="sg-msg-bubble">
         <div class="sg-typing-dots">
           <span></span><span></span><span></span>
@@ -474,7 +488,7 @@
 
     } catch (err) {
       hideTyping();
-      appendMessage('bot', '❌ Connection error. Make sure the backend is running at localhost:8000.');
+      appendMessage('bot', 'Connection error. Make sure the backend is running at localhost:8000.');
     }
 
     isLoading = false;
