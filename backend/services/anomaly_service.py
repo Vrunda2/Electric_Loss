@@ -156,23 +156,29 @@ def train_anomaly_model():
         _train_single_model(g_df, m_path, s_path, label=group)
 
     print("All models trained and saved")
+    global _LOADED_MODELS
+    _LOADED_MODELS.clear()
+    print("Memory cache cleared to load new models.")
 
 
 def _train_single_model(df: pd.DataFrame, model_path: str, scaler_path: str, label: str = ""):
     X = df[FEATURES].values
 
     try:
+        # Increase required standard deviation distance for training from > 3 to > 4, 
+        # and lower maximum contamination from 8% to 2% of the dataset to be much stricter mapping points.
         zs = np.abs((df['energy_sum'] - df['energy_sum'].mean()) / (df['energy_sum'].std() + 1e-9))
-        contamination = float(np.clip((zs > 3).mean(), 0.02, 0.08))
+        contamination = float(np.clip((zs > 4).mean(), 0.005, 0.02))
     except Exception:
-        contamination = 0.05
+        contamination = 0.01
     print(f"  {label}: contamination={contamination:.3f}, n={len(df):,}")
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
     model = IsolationForest(
-        n_estimators=150,
+        n_estimators=300,
+        max_samples="auto",
         contamination=contamination,
         random_state=42,
         n_jobs=-1
@@ -184,18 +190,26 @@ def _train_single_model(df: pd.DataFrame, model_path: str, scaler_path: str, lab
     print(f"  Saved: {model_path}")
 
 
+_LOADED_MODELS = {}
+
 def _load_model_for_group(acorn_group: str = None):
     """Load per-group model if it exists, else fall back to global."""
+    cache_key = acorn_group if acorn_group else 'global'
+    if cache_key in _LOADED_MODELS:
+        return _LOADED_MODELS[cache_key]
+
     if acorn_group:
         m_path, s_path = _model_path(acorn_group)
         if os.path.exists(m_path) and os.path.exists(s_path):
             with open(m_path, 'rb') as f: model = pickle.load(f)
             with open(s_path, 'rb') as f: scaler = pickle.load(f)
+            _LOADED_MODELS[cache_key] = (model, scaler)
             return model, scaler
 
     if os.path.exists(GLOBAL_MODEL_PATH) and os.path.exists(GLOBAL_SCALER_PATH):
         with open(GLOBAL_MODEL_PATH, 'rb') as f: model = pickle.load(f)
         with open(GLOBAL_SCALER_PATH, 'rb') as f: scaler = pickle.load(f)
+        _LOADED_MODELS['global'] = (model, scaler)
         return model, scaler
 
     print("No trained model found — training now...")
@@ -275,8 +289,9 @@ def detect_anomalies(household_id: str = None, save_to_db: bool = True):
 
     df = pd.concat(all_preds, ignore_index=True)
 
+    # Require z-score > 3 AND the AI model to agree rather than OR. This drastically cuts noise.
     df['stat_anomaly']  = df['z_score'].abs() > 3
-    df['final_anomaly'] = df['is_anomaly'] | df['stat_anomaly']
+    df['final_anomaly'] = df['is_anomaly'] & df['stat_anomaly']
     anomalies = df[df['final_anomaly']].copy()
 
     def get_severity(z):
@@ -329,7 +344,8 @@ def save_anomalies_to_db(anomalies_df: pd.DataFrame):
     insert_df = pd.DataFrame(records)
 
     with engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE anomalies"))
+        for hid in anomalies_df['household_id'].unique():
+            conn.execute(text("DELETE FROM anomalies WHERE household_id = :hid"), {"hid": hid})
         conn.commit()
 
     insert_df.to_sql('anomalies', engine, if_exists='append', index=False)

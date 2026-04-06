@@ -7,10 +7,20 @@ import bcrypt
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
+import os
+from dotenv import load_dotenv
+
+# Load env variables
+load_dotenv()
+
 # Configuration
-SECRET_KEY = "Electrical_losses_2026"  # Change this in production!
+SECRET_KEY = os.getenv("AUTH_SECRET_KEY")
+if not SECRET_KEY:
+    # Safe fallback for dev only, but we prefer env
+    SECRET_KEY = "Electrical_losses_2026_fallback"
+
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 day session for convenience
 
 
 class Token(BaseModel):

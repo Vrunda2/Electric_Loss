@@ -267,23 +267,13 @@ def get_efficiency_scores(limit: int = 500):
 # City daily summary — cached 5 min
 # ─────────────────────────────────────────────────────────
 def get_city_daily_summary(start_date: str = None, end_date: str = None):
-    cache_key = f"city_{start_date}_{end_date}"
+    cache_key = f"city_v2_{start_date}_{end_date}"
     cached = _get_cache(cache_key, ttl=300)
     if cached is not None:
         return cached
 
     engine = get_engine()
-    query_str = """
-        SELECT
-            reading_date,
-            COUNT(DISTINCT household_id)  AS active_households,
-            ROUND(AVG(energy_sum), 4)     AS avg_consumption,
-            ROUND(SUM(energy_sum), 2)     AS total_consumption,
-            ROUND(MAX(energy_sum), 4)     AS max_consumption,
-            ROUND(MIN(energy_sum), 4)     AS min_consumption
-        FROM daily_energy
-        WHERE energy_sum IS NOT NULL
-    """
+    query_str = "SELECT * FROM city_daily_summary WHERE 1=1"
     params = {}
     if start_date:
         query_str += " AND reading_date >= :start"
@@ -291,7 +281,7 @@ def get_city_daily_summary(start_date: str = None, end_date: str = None):
     if end_date:
         query_str += " AND reading_date <= :end"
         params["end"] = end_date
-    query_str += " GROUP BY reading_date ORDER BY reading_date"
+    query_str += " ORDER BY reading_date"
 
     with engine.connect() as conn:
         result = conn.execute(text(query_str), params)
@@ -304,7 +294,7 @@ def get_city_daily_summary(start_date: str = None, end_date: str = None):
 # Dashboard summary — cached 5 min
 # ─────────────────────────────────────────────────────────
 def get_dashboard_summary():
-    cached = _get_cache("dashboard", ttl=300)
+    cached = _get_cache("dashboard_v2", ttl=300)
     if cached is not None:
         return cached
 
@@ -312,12 +302,11 @@ def get_dashboard_summary():
     with engine.connect() as conn:
         row = conn.execute(text("""
             SELECT
-                COUNT(*)          AS total_readings,
-                AVG(energy_sum)   AS avg_consumption,
+                SUM(active_households) AS total_readings,
+                SUM(total_consumption) / SUM(active_households) AS avg_consumption,
                 MIN(reading_date) AS date_start,
                 MAX(reading_date) AS date_end
-            FROM daily_energy
-            WHERE energy_sum IS NOT NULL AND energy_sum > 0
+            FROM city_daily_summary
         """)).fetchone()
 
         households = conn.execute(text("SELECT COUNT(*) FROM households")).scalar()
@@ -331,35 +320,22 @@ def get_dashboard_summary():
         "date_range_start":      str(row[2]) if row[2] else "",
         "date_range_end":        str(row[3]) if row[3] else "",
     }
-    return _set_cache("dashboard", data)
+    return _set_cache("dashboard_v2", data)
 
 
 # ─────────────────────────────────────────────────────────
 # ACORN analytics — cached 10 min
 # ─────────────────────────────────────────────────────────
 def get_acorn_analytics():
-    cached = _get_cache("acorn", ttl=600)
+    cached = _get_cache("acorn_v2", ttl=600)
     if cached is not None:
         return cached
 
     engine = get_engine()
-    query = text("""
-        SELECT
-            h.acorn_group,
-            h.acorn_category,
-            COUNT(DISTINCT h.household_id) AS household_count,
-            ROUND(AVG(d.energy_sum), 4)    AS avg_daily_consumption,
-            ROUND(MAX(d.energy_sum), 4)    AS max_consumption,
-            ROUND(MIN(d.energy_sum), 4)    AS min_consumption
-        FROM households h
-        JOIN daily_energy d ON h.household_id = d.household_id
-        WHERE d.energy_sum IS NOT NULL
-        GROUP BY h.acorn_group, h.acorn_category
-        ORDER BY avg_daily_consumption DESC
-    """)
     with engine.connect() as conn:
-        data = [dict(row._mapping) for row in conn.execute(query)]
-    return _set_cache("acorn", data)
+        result = conn.execute(text("SELECT * FROM acorn_summary ORDER BY avg_daily_consumption DESC"))
+        data = [dict(row._mapping) for row in result]
+    return _set_cache("acorn_v2", data)
 
 
 # ─────────────────────────────────────────────────────────
@@ -431,22 +407,37 @@ def get_weather_energy_correlation():
 # Tariff comparison — cached 10 min
 # ─────────────────────────────────────────────────────────
 def get_tariff_comparison():
-    cached = _get_cache("tariff", ttl=600)
+    cached = _get_cache("tariff_v2", ttl=600)
     if cached is not None:
         return cached
 
     engine = get_engine()
-    query = text("""
-        SELECT
-            h.tariff_type,
-            COUNT(DISTINCT h.household_id) AS household_count,
-            ROUND(AVG(d.energy_sum), 4)    AS avg_daily_kwh,
-            ROUND(SUM(d.energy_sum), 2)    AS total_kwh
-        FROM households h
-        JOIN daily_energy d ON h.household_id = d.household_id
-        WHERE d.energy_sum IS NOT NULL
-        GROUP BY h.tariff_type
-    """)
     with engine.connect() as conn:
-        data = [dict(row._mapping) for row in conn.execute(query)]
-    return _set_cache("tariff", data)
+        result = conn.execute(text("SELECT * FROM tariff_summary"))
+        data = [dict(row._mapping) for row in result]
+    return _set_cache("tariff_v2", data)
+
+    results = {}
+    for d in d_rows:
+        hid = str(d[0])
+        tariff = tariffs.get(hid, "Unknown")
+        reads = int(d[1]) if d[1] is not None else 0
+        total = float(d[2]) if d[2] is not None else 0.0
+        
+        if tariff not in results:
+            results[tariff] = {"tariff_type": tariff, "household_count": 0, "reads": 0, "total": 0.0}
+            
+        results[tariff]["household_count"] += 1
+        results[tariff]["reads"] += reads
+        results[tariff]["total"] += total
+
+    final_data = []
+    for t, s in results.items():
+        avg = s["total"] / s["reads"] if s["reads"] > 0 else 0
+        final_data.append({
+            "tariff_type": t,
+            "household_count": s["household_count"],
+            "avg_daily_kwh": round(avg, 4),
+            "total_kwh": round(s["total"], 2)
+        })
+    return _set_cache("tariff", final_data)

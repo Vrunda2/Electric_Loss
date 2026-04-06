@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+import os
+from dotenv import load_dotenv
+
+# Load environment before anything else!
+load_dotenv()
+
 from backend.routers import households, energy, anomalies, weather, analytics, forecast, auth
 from backend.routers.chatbot import router as chatbot_router
 
@@ -26,15 +32,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.auth.dependencies import get_current_user
+from fastapi import Depends
+
 # Register all routers
-app.include_router(auth.router)  # Auth must be first
-app.include_router(households.router)
-app.include_router(energy.router)
-app.include_router(anomalies.router)
-app.include_router(weather.router)
-app.include_router(analytics.router)
-app.include_router(forecast.router)
-app.include_router(chatbot_router)
+app.include_router(auth.router)  # Auth must be first and PUBLIC
+app.include_router(households.router, dependencies=[Depends(get_current_user)])
+app.include_router(energy.router, dependencies=[Depends(get_current_user)])
+app.include_router(anomalies.router, dependencies=[Depends(get_current_user)])
+app.include_router(weather.router, dependencies=[Depends(get_current_user)])
+app.include_router(analytics.router, dependencies=[Depends(get_current_user)])
+app.include_router(forecast.router, dependencies=[Depends(get_current_user)])
+app.include_router(chatbot_router, dependencies=[Depends(get_current_user)])
 
 # Mount static files for the frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

@@ -1,0 +1,86 @@
+[
+  {
+    "id": 1,
+    "tags": ["households", "count", "total", "dataset", "how many", "size"],
+    "question": "How many households are in the dataset?",
+    "answer": "The dataset contains 5,566 households across London, each identified by a unique MAC address (e.g., MAC000001). These households participate in the Low Carbon London smart meter trial period from 2011 to 2014."
+  },
+  {
+    "id": 2,
+    "tags": ["readings", "records", "data points", "total readings", "how many readings", "volume"],
+    "question": "How many energy readings are there?",
+    "answer": "The dataset contains over 3.5 million energy readings, recorded at 30-minute intervals across all 5,566 households."
+  },
+  {
+    "id": 3,
+    "tags": ["acorn", "group", "category", "demographic", "classification", "segment", "acron"],
+    "question": "What are ACORN groups?",
+    "answer": "ACORN (A Classification Of Residential Neighbourhoods) is a socio-economic classification system used to segment households into demographics like Affluent Achievers, Rising Prosperity, Comfortable Communities, Financially Stretched, and Urban Adversity."
+  },
+  {
+    "id": 4,
+    "tags": ["tariff", "pricing", "standard", "time of use", "tou", "what is tariff", "definition"],
+    "question": "What is a tariff and what types are in the dataset?",
+    "answer": "In energy analytics, a tariff is the pricing structure used for electricity consumption. This project features two types: Standard (STD), which is a flat rate regardless of time, and Time-of-Use (ToU), which changes pricing based on demand (Peak vs. Off-Peak) to encourage energy conservation during the evening."
+  },
+  {
+    "id": 5,
+    "tags": ["consumption", "average", "daily", "kwh", "typical", "mean energy", "avg consumption"],
+    "question": "What is the average daily energy consumption?",
+    "answer": "The average daily household energy consumption is approximately 8–12 kWh per day, though this varies by season (winter is 40% higher) and ACORN demographic."
+  },
+  {
+    "id": 6,
+    "tags": ["anomaly types", "categories", "spike", "drop", "pattern"],
+    "question": "What types of anomalies are detected?",
+    "answer": "The system identifies High Consumption Spikes, Low Consumption Drops, and Unusual Pattern Deviations, classified into severity levels: LOW, MEDIUM, HIGH, and CRITICAL."
+  },
+  {
+    "id": 7,
+    "tags": ["anomaly calculation", "algorithm", "how detected", "logic", "calculated", "formula"],
+    "question": "How are anomalies calculated in this project?",
+    "answer": "Anomalies are detected using a dual-check Hybrid Logic: 1. Machine Learning: We use an Isolation Forest algorithm trained specifically for each ACORN group. 2. Statistics: We calculate a 30-day Rolling Z-Score to compare consumption to a seasonal baseline. A final anomaly is only flagged if the AI and the Statistical threshold both agree, ensuring high accuracy."
+  },
+  {
+    "id": 8,
+    "tags": ["blocks", "data blocks", "files", "chunks", "how many blocks"],
+    "question": "How many blocks are in the database/dataset?",
+    "answer": "The SmartGrid dataset is organized into 112 Data Blocks. These blocks represent segments of the 5,566 households, allowing the system to process massive amounts of energy data in parallel chunks for better performance."
+  },
+  {
+    "id": 9,
+    "tags": ["weather", "temperature", "extremes", "hot", "cold", "winter 2012"],
+    "question": "What are the temperature extremes in the dataset?",
+    "answer": "The coldest recorded low was approximately -8°C during winter 2012, and the hottest recorded high was approximately 33°C during the summer of 2013. These extremes cause direct spikes in energy demand."
+  },
+  {
+    "id": 10,
+    "tags": ["peak", "evening", "timing", "highest consumption"],
+    "question": "When is energy consumption highest during the day?",
+    "answer": "Consumption is highest during the Morning Peak (7:00 AM – 9:00 AM) and the Evening Peak (5:00 PM – 8:00 PM), which is the primary focus of Time-of-Use pricing strategies."
+  },
+  {
+    "id": 11,
+    "tags": ["loss", "electric loss", "definition", "wasted energy", "how is loss calculated"],
+    "question": "What is 'Electric Loss' in this project?",
+    "answer": "In this SmartGrid project, 'Electric Loss' refers to energy that is wasted or unaccounted for due to inefficiencies or anomalies. We identify these losses by detecting 'Pattern Deviations' and 'High Consumption Spikes' that significantly exceed a household's typical baseline (calculated via Z-Score and Isolation Forest). These anomalies represent opportunities for energy savings and infrastructure improvements."
+  },
+  {
+    "id": 12,
+    "tags": ["benchmark", "acorn peer", "comparison", "percentile"],
+    "question": "What is Benchmarking in the Cost section?",
+    "answer": "Benchmarking compares a single household's energy usage against the average consumption of its specific ACORN peer group. This shows if a household is an outlier (consuming more than their neighbors) or highly efficient (consuming less than their neighbors) within the same socio-economic segment."
+  },
+  {
+    "id": 13,
+    "tags": ["efficiency score", "calculation", "ranking"],
+    "question": "How is the Efficiency Score calculated?",
+    "answer": "Efficiency scores range from 0 to 100. We rank all households within an ACORN group by their average consumption. The most efficient house (lowest consumption) gets 100, and the least efficient (highest consumption) gets 0. This helps identify the 'Greenest' households in each London category."
+  },
+  {
+    "id": 14,
+    "tags": ["time", "dates", "range", "coverage", "how old"],
+    "question": "What is the time range of the dataset?",
+    "answer": "The smart meter data covers the period from late 2011 to early 2014. This allows for long-term seasonal analysis across multiple winters and summers."
+  }
+]
