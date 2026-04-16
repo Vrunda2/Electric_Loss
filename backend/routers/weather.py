@@ -3,7 +3,9 @@ from typing import Optional
 from sqlalchemy import text
 from backend.config.database import get_engine
 
-router = APIRouter(prefix="/weather", tags=["Weather"])
+from fastapi import Depends
+from backend.auth.dependencies import get_current_user
+router = APIRouter(prefix="/weather", tags=["Weather"], dependencies=[Depends(get_current_user)])
 
 @router.get("/daily")
 def daily_weather(start_date: Optional[str] = None, end_date: Optional[str] = None):

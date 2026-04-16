@@ -18,7 +18,9 @@ from backend.services.energy_service import (
 )
 
 
-router = APIRouter(prefix="/energy", tags=["Energy"])
+from fastapi import Depends
+from backend.auth.dependencies import get_current_user
+router = APIRouter(prefix="/energy", tags=["Energy"], dependencies=[Depends(get_current_user)])
 
 
 # ── Existing endpoints (unchanged) ──────────────────────

@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query
 from backend.services.energy_service import get_all_households, get_household_by_id
 
-router = APIRouter(prefix="/households", tags=["Households"])
+from fastapi import Depends
+from backend.auth.dependencies import get_current_user
+router = APIRouter(prefix="/households", tags=["Households"], dependencies=[Depends(get_current_user)])
 
 @router.get("/")
 def list_households(limit: int = Query(100, le=1000), offset: int = 0):

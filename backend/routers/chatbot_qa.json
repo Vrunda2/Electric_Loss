@@ -27,19 +27,19 @@
     "id": 5,
     "tags": ["consumption", "average", "daily", "kwh", "typical", "mean energy", "avg consumption"],
     "question": "What is the average daily energy consumption?",
-    "answer": "The average daily household energy consumption is approximately 8–12 kWh per day, though this varies by season (winter is 40% higher) and ACORN demographic."
+    "answer": "The average daily household energy consumption is approximately 8-12 kWh per day, though this varies by season (winter is 40% higher) and ACORN demographic."
   },
   {
     "id": 6,
     "tags": ["anomaly types", "categories", "spike", "drop", "pattern"],
     "question": "What types of anomalies are detected?",
-    "answer": "The system identifies High Consumption Spikes, Low Consumption Drops, and Unusual Pattern Deviations, classified into severity levels: LOW, MEDIUM, HIGH, and CRITICAL."
+    "answer": "The system identifies three anomaly types: High Consumption Spikes, Low Consumption Drops, and Unusual Pattern Deviations. These are classified into severity levels: MEDIUM (Z-Score > 2.5), HIGH (Z-Score > 3.5), and CRITICAL (Z-Score > 5). Only events flagged by both the AI model and the statistical check are saved."
   },
   {
     "id": 7,
-    "tags": ["anomaly calculation", "algorithm", "how detected", "logic", "calculated", "formula"],
+    "tags": ["anomaly calculation", "algorithm", "how detected", "logic", "calculated", "formula", "isolation forest", "z-score"],
     "question": "How are anomalies calculated in this project?",
-    "answer": "Anomalies are detected using a dual-check Hybrid Logic: 1. Machine Learning: We use an Isolation Forest algorithm trained specifically for each ACORN group. 2. Statistics: We calculate a 30-day Rolling Z-Score to compare consumption to a seasonal baseline. A final anomaly is only flagged if the AI and the Statistical threshold both agree, ensuring high accuracy."
+    "answer": "Anomalies are detected using a dual-check Hybrid Logic: 1. Machine Learning: An Isolation Forest algorithm trained separately per ACORN group with a contamination rate between 5% and 10%. 2. Statistics: A 30-day Rolling Z-Score compares consumption to a seasonal rolling baseline, not an all-time average. A final anomaly is only flagged if BOTH the AI and the Z-Score (threshold > 2.5) agree, ensuring high accuracy and fewer false positives."
   },
   {
     "id": 8,
@@ -51,13 +51,13 @@
     "id": 9,
     "tags": ["weather", "temperature", "extremes", "hot", "cold", "winter 2012"],
     "question": "What are the temperature extremes in the dataset?",
-    "answer": "The coldest recorded low was approximately -8°C during winter 2012, and the hottest recorded high was approximately 33°C during the summer of 2013. These extremes cause direct spikes in energy demand."
+    "answer": "The coldest recorded low was approximately -8 degrees C during winter 2012, and the hottest recorded high was approximately 33 degrees C during the summer of 2013. These extremes cause direct spikes in energy demand."
   },
   {
     "id": 10,
     "tags": ["peak", "evening", "timing", "highest consumption"],
     "question": "When is energy consumption highest during the day?",
-    "answer": "Consumption is highest during the Morning Peak (7:00 AM – 9:00 AM) and the Evening Peak (5:00 PM – 8:00 PM), which is the primary focus of Time-of-Use pricing strategies."
+    "answer": "Consumption is highest during the Morning Peak (7:00 AM to 9:00 AM) and the Evening Peak (5:00 PM to 8:00 PM), which is the primary focus of Time-of-Use pricing strategies."
   },
   {
     "id": 11,
@@ -81,6 +81,72 @@
     "id": 14,
     "tags": ["time", "dates", "range", "coverage", "how old"],
     "question": "What is the time range of the dataset?",
-    "answer": "The smart meter data covers the period from late 2011 to early 2014. This allows for long-term seasonal analysis across multiple winters and summers."
+    "answer": "The smart meter data covers the period from late 2011 to early 2014, specifically November 2011 to February 2014. This allows for long-term seasonal analysis across multiple winters and summers."
+  },
+  {
+    "id": 15,
+    "tags": ["forecast", "predict", "prediction", "prophet", "future", "30 days", "days ahead"],
+    "question": "How does the forecasting model work?",
+    "answer": "The forecasting system uses Facebook Prophet, a time-series model. For a given household, Prophet is trained on its entire historical daily energy consumption. It then uses logistic growth curves to predict the next 30 to 90 days. Importantly, it also factors in UK Bank Holidays and uses the average temperature from the last 30 days as an external regressor, so predictions account for both seasonal trends and weather."
+  },
+  {
+    "id": 16,
+    "tags": ["prophet", "model", "time series", "forecast model", "ml model"],
+    "question": "What is the Prophet forecasting model?",
+    "answer": "Prophet is a procedure for forecasting time series data developed by Facebook. It works best with data that has strong seasonal effects and is robust to missing data and trend shifts. In this project, Prophet models are fit per-household using daily energy readings, UK bank holidays, and temperature data as external regressors. The model outputs a predicted value (yhat) along with uncertainty bounds (lower and upper)."
+  },
+  {
+    "id": 17,
+    "tags": ["weather correlation", "pearson", "temperature energy", "humidity", "r value", "correlation"],
+    "question": "How is weather correlated with energy consumption?",
+    "answer": "The Analytics page shows a Pearson correlation coefficient (r) between each weather variable and daily average energy consumption. Temperature has a strong negative correlation (around -0.6 to -0.7), meaning colder days significantly increase energy use. Humidity shows a moderate negative correlation. Wind speed shows a weak correlation. The scatter chart visually shows how energy spikes on cold days in the London dataset."
+  },
+  {
+    "id": 18,
+    "tags": ["tech stack", "technology", "built with", "backend", "frontend", "framework", "language"],
+    "question": "What technology stack is used in this project?",
+    "answer": "The SmartGrid Analytics platform is a full-stack application. The backend uses FastAPI (Python) for the REST API, SQLAlchemy for database access, and MySQL for the database. The frontend is built with React (Vite) and uses Chart.js for data visualization. The AI Chatbot uses the Google Gemini API for both semantic embeddings and text generation."
+  },
+  {
+    "id": 19,
+    "tags": ["security", "authentication", "jwt", "bearer", "token", "login", "protected"],
+    "question": "How is the API secured?",
+    "answer": "All data endpoints in the SmartGrid backend are protected with JWT (JSON Web Token) Bearer Authentication. When an admin logs in via the /auth/login endpoint, the server generates a signed JWT token. The React frontend stores this token in localStorage and attaches it as an 'Authorization: Bearer <token>' header on every subsequent API request. Endpoints return HTTP 401 Unauthorized if no valid token is provided."
+  },
+  {
+    "id": 20,
+    "tags": ["rag", "chatbot", "how chatbot works", "gemini", "embedding", "retrieval"],
+    "question": "How does the AI Chatbot work?",
+    "answer": "The chatbot uses a Retrieval-Augmented Generation (RAG) architecture. First, a semantic embedding is created for each Q&A entry in the knowledge base using the Google Gemini Embedding API. When a user asks a question, the same embedding API converts the question into a vector. Cosine similarity is used to find the top 5 most relevant knowledge base entries. These entries are then injected as context into the Gemini generative model, which produces a grounded and accurate final answer."
+  },
+  {
+    "id": 21,
+    "tags": ["rolling zscore", "rolling baseline", "seasonal", "why rolling"],
+    "question": "Why does the anomaly system use a rolling Z-Score instead of a fixed average?",
+    "answer": "Using a fixed all-time average creates seasonal false positives: a household using 15 kWh on a freezing January day looks anomalous compared to their warm-summer average. The 30-day rolling Z-Score compares each reading only to the most recent 30 days of that same household's behavior, ensuring a July spike is compared to July baselines and a January spike is compared to January baselines. This cuts false positives dramatically."
+  },
+  {
+    "id": 22,
+    "tags": ["contamination", "isolation forest parameter", "false positive", "accuracy"],
+    "question": "What is the contamination parameter in the Isolation Forest?",
+    "answer": "Contamination is the proportion of the dataset the Isolation Forest is allowed to label as anomalies. In this project it is dynamically calculated per ACORN group — clamped between 5% and 10% based on the actual statistical distribution of each group's energy data. This prevents over-flagging normal seasonal variation and ensures only the top 5-10% most unusual readings are considered by the AI model."
+  },
+  {
+    "id": 23,
+    "tags": ["cost calculation", "tariff rate", "gbp", "electricity cost", "how cost calculated"],
+    "question": "How is the electricity cost estimated?",
+    "answer": "Cost is estimated per day using the household's tariff type. Standard (STD) tariff uses a flat rate of GBP 0.28 per kWh. Time-of-Use (ToU) tariff uses a blended rate calculated from the empirical peak/off-peak split: 56% of daily energy at the peak rate (GBP 0.38/kWh) and 44% at the off-peak rate (GBP 0.15/kWh). The Cost page shows daily and cumulative cost over the selected date range."
+  },
+  {
+    "id": 24,
+    "tags": ["data source", "dataset", "london", "low carbon", "uk smart meter", "where data from"],
+    "question": "Where does the data come from?",
+    "answer": "The data comes from the Low Carbon London project, a UK trial run from 2011 to 2014. Smart meters were installed in 5,566 London households to study energy consumption patterns, the effectiveness of Time-of-Use tariffs, and the impact of socio-economic factors (ACORN classifications) on electricity usage."
+  },
+  {
+    "id": 25,
+    "tags": ["half hourly", "30 minute", "interval", "granularity", "hh data"],
+    "question": "At what granularity is energy data recorded?",
+    "answer": "Energy data is recorded at 30-minute (half-hourly) intervals, resulting in 48 readings per household per day. The system also pre-aggregates this into daily summaries (energy_sum, energy_mean, energy_max, energy_min, energy_std) stored in the daily_energy table for faster analytics queries."
   }
 ]

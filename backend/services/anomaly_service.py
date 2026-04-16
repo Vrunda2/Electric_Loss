@@ -115,7 +115,10 @@ def add_rolling_zscore(df: pd.DataFrame, window: int = 30) -> pd.DataFrame:
     df['rolling_mean'] = df['rolling_mean'].fillna(df['global_mean'])
     df['rolling_std']  = df['rolling_std'].fillna(df['global_std'])
 
-    df['z_score'] = (df['energy_sum'] - df['rolling_mean']) / (df['rolling_std'] + 1e-9)
+    # Clip standard deviation to a minimum of 0.5 to prevent massive division-by-zero Z-scores on stagnant meters
+    df['rolling_std'] = df['rolling_std'].clip(lower=0.5)
+    
+    df['z_score'] = (df['energy_sum'] - df['rolling_mean']) / df['rolling_std']
     return df
 
 
@@ -165,12 +168,11 @@ def _train_single_model(df: pd.DataFrame, model_path: str, scaler_path: str, lab
     X = df[FEATURES].values
 
     try:
-        # Increase required standard deviation distance for training from > 3 to > 4, 
-        # and lower maximum contamination from 8% to 2% of the dataset to be much stricter mapping points.
-        zs = np.abs((df['energy_sum'] - df['energy_sum'].mean()) / (df['energy_sum'].std() + 1e-9))
-        contamination = float(np.clip((zs > 4).mean(), 0.005, 0.02))
+        # Target 5-10% anomaly rate as requested by user
+        zs = np.abs((df['energy_sum'] - df['energy_sum'].mean()) / (df['energy_sum'].std() + 0.1))
+        contamination = float(np.clip((zs > 2.5).mean(), 0.05, 0.10))
     except Exception:
-        contamination = 0.01
+        contamination = 0.05
     print(f"  {label}: contamination={contamination:.3f}, n={len(df):,}")
 
     scaler = StandardScaler()
@@ -289,15 +291,15 @@ def detect_anomalies(household_id: str = None, save_to_db: bool = True):
 
     df = pd.concat(all_preds, ignore_index=True)
 
-    # Require z-score > 3 AND the AI model to agree rather than OR. This drastically cuts noise.
-    df['stat_anomaly']  = df['z_score'].abs() > 3
+    # Require mathematically significant event AND the AI model to agree.
+    df['stat_anomaly']  = df['z_score'].abs() > 2.5
     df['final_anomaly'] = df['is_anomaly'] & df['stat_anomaly']
     anomalies = df[df['final_anomaly']].copy()
 
     def get_severity(z):
         az = abs(z)
-        if az > 6:   return 'CRITICAL'
-        elif az > 4: return 'HIGH'
+        if az > 5:   return 'CRITICAL'
+        elif az > 3.5: return 'HIGH'
         else:        return 'MEDIUM'
 
     def get_type(row):

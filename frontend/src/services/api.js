@@ -63,7 +63,7 @@ export const API = {
   household:       (id)        => api.get(`/households/${id}`),
   householdEnergy: (id, s, e)  => api.get(`/energy/household/${id}${_dateParams(s,e)}`),
   citySummary:     (s, e)      => api.get(`/energy/city/summary${_dateParams(s, e)}`),
-  anomalies:       (sev='', limit=500) => api.get(`/anomalies/?limit=${limit}${sev?'&severity='+sev:''}`),
+  anomalies:       (sev='', limit=100000) => api.get(`/anomalies/?limit=${limit}${sev?'&severity='+sev:''}`),
   trainModel:      ()          => api.post('/anomalies/train'),
   detectSync:      (id='')     => api.post(`/anomalies/detect/sync${id?'?household_id='+id:''}`),
   weatherDaily:    ()          => api.get('/weather/daily'),

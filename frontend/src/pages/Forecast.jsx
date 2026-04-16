@@ -145,7 +145,9 @@ export default function Forecast() {
         <div className="forecast-chart-panel glass-panel">
           <div className="chart-header">
             <h3>Energy Consumption Forecast</h3>
-            <p className="chart-subtitle">{householdId} — {days}-day prediction using Facebook Prophet</p>
+            <p className="chart-subtitle">
+              {householdId} — {days}-day prediction from <strong>{forecastData[0]?.date}</strong> to <strong>{forecastData[forecastData.length - 1]?.date}</strong>
+            </p>
           </div>
           <div className="chart-container">
             <Line

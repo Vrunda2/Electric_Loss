@@ -302,7 +302,7 @@ export default function Anomalies() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 50).map((a, i) => (
+                {filtered.slice(0, 100).map((a, i) => (
                   <tr key={i} className="anomaly-row">
                     <td className="household-id">{a.household_id}</td>
                     <td className="date-cell">{a.detected_at?.slice(0, 10)}</td>

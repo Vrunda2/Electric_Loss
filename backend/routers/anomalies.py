@@ -4,13 +4,15 @@ from backend.services.anomaly_service import (
     detect_anomalies, get_anomalies_from_db, train_anomaly_model
 )
 
-router = APIRouter(prefix="/anomalies", tags=["Anomalies"])
+from fastapi import Depends
+from backend.auth.dependencies import get_current_user
+router = APIRouter(prefix="/anomalies", tags=["Anomalies"], dependencies=[Depends(get_current_user)])
 
 @router.get("/")
 def list_anomalies(
     household_id: Optional[str] = None,
     severity: Optional[str] = None,
-    limit: int = Query(100, le=1000)
+    limit: int = Query(100000, le=100000)
 ):
     return get_anomalies_from_db(household_id, severity, limit)
 

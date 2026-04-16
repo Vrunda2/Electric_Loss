@@ -39,8 +39,18 @@ function KpiCard({ title, value, sub, icon: Icon, color, bg }) {
 
 export default function Cost() {
   const [householdId, setHouseholdId] = useState('MAC000002');
-  const [fromDate, setFromDate]       = useState('');
-  const [toDate, setToDate]           = useState('');
+  const [fromDate, setFromDate]       = useState('2012-01-01');
+  const [toDate, setToDate]           = useState('2013-12-31');
+
+  const DATA_MIN = '2011-11-23';
+  const DATA_MAX = '2014-02-28';
+
+  const PRESETS = [
+    { label: 'Full Dataset', from: '2011-11-23', to: '2014-02-28' },
+    { label: '2012 Only',    from: '2012-01-01', to: '2012-12-31' },
+    { label: '2013 Only',    from: '2013-01-01', to: '2013-12-31' },
+    { label: '2012 – 2013',  from: '2012-01-01', to: '2013-12-31' },
+  ];
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
   const [costData, setCostData]       = useState(null);
@@ -219,6 +229,36 @@ export default function Cost() {
       <h1 className="page-title">Cost Estimation & Peer Benchmarking</h1>
 
       <div className="cost-form-panel">
+        {/* Dataset date hint */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          fontSize: '12px', color: 'var(--muted)', marginBottom: '14px',
+          background: 'rgba(59,91,219,0.07)', borderRadius: '8px',
+          padding: '8px 14px', border: '1px solid rgba(59,91,219,0.15)'
+        }}>
+          <CalendarDays size={14} style={{ color: '#3b5bdb', flexShrink: 0 }} />
+          <span>Dataset covers <strong style={{ color: '#3b5bdb' }}>Nov 2011 → Feb 2014</strong>. Use the quick presets below or pick any date within that range.</span>
+        </div>
+
+        {/* Quick preset buttons */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          {PRESETS.map(p => (
+            <button
+              key={p.label}
+              onClick={() => { setFromDate(p.from); setToDate(p.to); }}
+              style={{
+                padding: '5px 14px', fontSize: '12px', fontWeight: 600,
+                borderRadius: '20px', border: '1.5px solid #3b5bdb',
+                background: (fromDate === p.from && toDate === p.to) ? '#3b5bdb' : 'transparent',
+                color:      (fromDate === p.from && toDate === p.to) ? '#fff'    : '#3b5bdb',
+                cursor: 'pointer', transition: 'all 0.2s'
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         <div className="form-grid">
           <div className="form-group">
             <label className="form-label">Household ID</label>
@@ -236,6 +276,8 @@ export default function Cost() {
               type="date"
               className="form-input"
               value={fromDate}
+              min={DATA_MIN}
+              max={DATA_MAX}
               onChange={e => setFromDate(e.target.value)}
             />
           </div>
@@ -245,6 +287,8 @@ export default function Cost() {
               type="date"
               className="form-input"
               value={toDate}
+              min={DATA_MIN}
+              max={DATA_MAX}
               onChange={e => setToDate(e.target.value)}
             />
           </div>

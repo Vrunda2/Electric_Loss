@@ -16,8 +16,7 @@ load_dotenv()
 # Configuration
 SECRET_KEY = os.getenv("AUTH_SECRET_KEY")
 if not SECRET_KEY:
-    # Safe fallback for dev only, but we prefer env
-    SECRET_KEY = "Electrical_losses_2026_fallback"
+    raise ValueError("AUTH_SECRET_KEY not set")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 day session for convenience

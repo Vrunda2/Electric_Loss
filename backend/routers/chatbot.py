@@ -17,7 +17,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-router = APIRouter(prefix="/chatbot", tags=["Chatbot"])
+from fastapi import Depends
+from backend.auth.dependencies import get_current_user
+router = APIRouter(prefix="/chatbot", tags=["Chatbot"], dependencies=[Depends(get_current_user)])
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Using v1 and gemini-2.5-flash-lite for maximum free-tier availability in 2026
@@ -105,7 +107,7 @@ async def _ensure_rag_initialized():
     if len(QA_KNOWLEDGE_BASE) == 0 and GEMINI_API_KEY:
         await initialize_rag()
 
-async def search_rag(query: str, top_k: int = 3) -> str:
+async def search_rag(query: str, top_k: int = 5) -> str:
     await _ensure_rag_initialized()
     
     # Try AI Embedding first
@@ -116,7 +118,8 @@ async def search_rag(query: str, top_k: int = 3) -> str:
             sim = cosine_similarity(query_vector, fact["vector"])
             scored.append((sim, fact["text"]))
         scored.sort(key=lambda x: x[0], reverse=True)
-        top_contexts = [text for sim, text in scored[:top_k] if sim > 0.4]
+        # Lowered threshold from 0.4 to 0.35 to capture more semantically close matches
+        top_contexts = [text for sim, text in scored[:top_k] if sim > 0.35]
         if top_contexts:
             return "\n\n---\n\n".join(top_contexts)
     
@@ -126,18 +129,19 @@ async def search_rag(query: str, top_k: int = 3) -> str:
 
 # ── System Prompts ────────────────────────────────────────────────────────────
 # CONTEXT_INJECTION instead of systemInstruction field
-SYSTEM_RULES = """You are SmartGrid AI, an expert assistant for the London smart meter dataset.
-Answer the user's LATEST message using ONLY the relevant facts from the Database below.
+SYSTEM_RULES = """You are SmartGrid AI, the expert assistant for the SmartGrid Analytics platform built on the Low Carbon London dataset (2011-2014).
+Answer ONLY the user's LATEST message using the relevant facts from the knowledge base below.
 
-DATABASE FACTS:
+KNOWLEDGE BASE:
 {context}
 
 STRICT RULES:
-1. Do NOT repeat previous answers from the conversation history if they aren't the current question.
-2. Do NOT mention other facts from the Database that weren't asked for in the LATEST message.
-3. No Markdown bolding or asterisks (*). 
-4. If the latest question is not answered by the facts above, say: "I don't have that specific information in my database."
-5. Be concise. One or two clear sentences max."""
+1. Answer ONLY what was asked in the LATEST message. Do not volunteer extra facts.
+2. Do NOT repeat any previous answer already given in the conversation history.
+3. Do NOT use Markdown bold (**) or asterisks. Use plain text only.
+4. Keep answers to 2-3 clear sentences maximum.
+5. If the answer is not in the knowledge base, respond exactly: "I don't have that specific information in my knowledge base."
+6. For numbers, always include the correct unit (kWh, GBP, households, etc)."""
 
 GREETING_REPLY = """Hi User I'm your **AI Assistant**.
 
@@ -243,10 +247,12 @@ async def chat(req: ChatRequest):
 async def get_suggestions():
     return {
         "suggestions": [
-            "How many households are in the dataset?",
+            "How are anomalies detected?",
+            "How does the forecasting model work?",
             "What are ACORN groups?",
-            "How does weather affect energy use?",
-            "What anomaly types are detected?",
+            "How is electricity cost calculated?",
+            "How is weather correlated with energy?",
+            "How is the API secured?",
             "Standard vs Time-of-Use tariff?",
             "What time period does data cover?",
         ]
